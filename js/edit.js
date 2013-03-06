@@ -41,7 +41,6 @@ define(["executor","jquery", "lib/diff"], function (exec,$,diff) {
 		function updateSelection() {
 			setTimeout(reallyUpdateSelection,0);
 			function reallyUpdateSelection() {
-				knidder.reset();
 				
 			}
 		}
@@ -91,6 +90,7 @@ define(["executor","jquery", "lib/diff"], function (exec,$,diff) {
 				action.val(contents);
 			}
 			return action;
+			
 		}
 		
 		function findMarker(val,context) {
@@ -174,13 +174,14 @@ define(["executor","jquery", "lib/diff"], function (exec,$,diff) {
 		function type(char) {
 			var action;
 			if (openAction && openAction.name =="typing") {
+				
 				action=openAction;
 				action.soFar+=char;
 				exec.update(function(){action.val(action.soFar)});
 			} else {
 				action=startAction("typing");
 				action.soFar=char;
-				exec.exec(function(){action.val(char)}, action.undo, "typing");
+				exec.exec(function(){action.val(char)}, "typing",  elem);
 				openAction=action;
 			}
 			return;
@@ -249,11 +250,6 @@ define(["executor","jquery", "lib/diff"], function (exec,$,diff) {
 			"return" :  returnKey
 		}
 		
-/*		knidder.reset=function () {
-			while (knidder.previousNode()){};
-		}
-		knidder.counter=makeCounter();
-*/		
 		this.configure=configure;
 		
 		$(elem).bind("input", function(e){console.log("Input event: ")});

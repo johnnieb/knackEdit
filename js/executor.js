@@ -14,7 +14,7 @@
 
 */
 
-define(['jquery'], function ($) {
+define(['jquery', "lib/diff"], function ($, diff) {
 	
 	var	executor={}, undos=[], redos=[], 
 		NO_UNDO_MESSAGE="Nothing to Undo",
@@ -25,11 +25,25 @@ define(['jquery'], function ($) {
 	/*
 		Each event in the undo/redo stacks is stored as an Action object.
 	*/
-	function Action(fn, ufn, label, cleanUpFn) {
-		this.redo=fn;
+	function Action(doDiff, undoDiff, label, context) {
+		console.log(doDiff,undoDiff);
+		var html=context.html();
+		this.redo=function() {
+			var result=diff.patch_apply(doDiff,html);
+			context.html(result);
+		}
+		this.undo=function() {
+			var result=diff.patch_apply(undoDiff, html);
+			context.html(result);
+		}
+		this.close=function() {
+			html=undefined;
+		}
+		this.getHtml=function(fn) {
+			return html;
+		}
+		this.context=context;
 		this.label=label ||  DEFAULT_ACTION_LABEL;
-		this.undo=ufn;
-		this.cleanUp=cleanUpFn || cleanUp;
 	}
 
 	//change configuration 
@@ -39,7 +53,7 @@ define(['jquery'], function ($) {
 		DEFAULT_ACTION_LABEL=obj.DEFAULT_ACTION_LABEL || DEFAULT_ACTION_LABEL;
 		MAX_UNDO_DEPTH=obj.MAX_UNDO_DEPTH || MAX_UNDO_DEPTH;
 	}
-
+	
 	//provide a useful string representation for tool tips/menu labels
 	$.extend(Action.prototype, {
 		toString: function () {return this.label}
@@ -47,39 +61,48 @@ define(['jquery'], function ($) {
 
 	/*
 		called when modifying the document. fn and ufn are the functions to , respectively, make and revert 
-		the desired document change. label is optional. The clean up function (cleanUpFn) is run when an action
-		is invalidated. It is optional.
+		the desired document change. label is optional. 
 	*/
-	executor.exec=function(fn, ufn, label, cleanUpFn) {
-		if (typeof fn !== "function" || typeof ufn !== "function") {
-			throw new Error("Executor: Exec - Invalid do or undo function");
+	executor.exec=function(fn, label, context) {
+		context=$(context);
+		if (typeof fn !== "function" ) {
+			throw new Error("Executor: Exec - Invalid function");
 		}
-		var action=new Action(fn, ufn, label, cleanUpFn || cleanUp);
+		
+		undos[0] && undos[0].close();
+		var oldState=context.html(), doDiff, undoDiff, newState, action;
+		fn(context);
+		newState=context.html();
+		doDiff=diff.patch_make(newState,oldState);
+		undoDiff=diff.patch_make(oldState,newState);
+		action=new Action(doDiff, undoDiff, label, context);
 		undos.unshift(action);
 		executor.clear("redo");
 		if (undos.length > MAX_UNDO_DEPTH) {
-			undos.pop().cleanUp();
+			undos.pop()
 		}
-		return fn();
 	}
-
-	//	A dummy cleanUp function to be used as default;
-	function cleanUp(){};
 
 	/*
 		To avoid too many undo steps (such as one per character typed), update can be called, instead of
 		exec. This will replace the most recent action in the undo stack with a new action. If a touchup function (tfn)
 		is provided, it will be executed instead of the regular function (fn) that ends up in the undo/redo stacks.
 	*/
-	executor.update=function (fn, touchupFn) {
-		var action, existing=undos.shift();
+	executor.update=function (fn) {
+		var action, existing=undos.shift(), newState, oldState, doDiff, undoDiff;
 		if (!existing) {
 			throw new Error("Executor: Update - No action to update");
 		}
-		action=new Action(fn, existing.undo, existing.label);
+		oldState=existing.getHtml();
+		if (oldState===undefined) {
+			throw new Error("Executor: Update - Latest undo is closed");
+		}
+		fn(existing.context);
+		newState=existing.context.html();
+		doDiff=diff.patch_make(newState,oldState);
+		undoDiff=diff.patch_make(oldState,newState);
+		action=new Action(doDiff,undoDiff, existing.label, existing.context);
 		undos.unshift(action);
-		fn=(typeof touchupFn ==="function") ? touchupFn : fn;
-		return  fn();
 	}
 
 	/*
@@ -125,12 +148,10 @@ define(['jquery'], function ($) {
 		var action;
 		if (which=="undo" || which=="both") {
 			while (action=undos.shift()) {
-				action.cleanUp();
 			}
 		}
 		if (which=="redo" || which=="both") {
 			while (action=redos.shift()) {
-				action.cleanUp();
 			}
 		}
 	}
