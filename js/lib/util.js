@@ -17,12 +17,53 @@ define( function () {
 		return selection.rangeCount ? selection.getRangeAt(0) : undefined;
 	}
 
-	function markSelection() {
-		var r=getSelection();
+	function markSelection(elem) {
+		
+		var 	selectionStart=document.createComment("com.the-knack.util/selStart"),
+			selectionEnd=document.createComment("com.the-knack.util/selEnd"),
+			r=getSelection();
+		unmarkSelection();
+		elem=$(elem).get(0);
+		if (!elem.contains(r.startContainer) || !elem.contains(r.endContainer)) {
+			return false;
+		}		
 		r.insertNode(selectionEnd);
 		r.insertNode(selectionStart);
 		r.setStartAfter(selectionStart);
 		r.setEndBefore(selectionEnd);
+	}
+	
+	
+	
+	function unmarkSelection(elem) {
+		var 	iterator=document.createNodeIterator(elem || document, NodeFilter.SHOW_COMMENT),
+			node;
+		while (node=iterator.nextNode()) {
+			if (node.nodeValue=="com.the-knack.util/selStart" || node.nodeValue=="com.the-knack.util/selEnd") {
+				node.parentNode.removeChilde(node);
+			} 
+		}
+	}
+	
+	function restoreMarkedSelection(elem) {
+		var result={},node,iterator=document.createNodeIterator(elem || document, NodeFilter.SHOW_COMMENT);
+		while (node=iterator.nextNode()) {
+			if (node.nodeValue=="com.the-knack.util/selStart") {
+				result.start=node;
+			} else {
+				if  (node.nodeValue=="com.the-knack.util/selEnd") {
+					result.end=node;
+				}
+			}
+		}
+		if (!result.start || !result.end) {
+			return false;
+		}
+		r=document.createRange();
+		r.setStartAfter(start);
+		r.setEndBefore(end);
+		select(r);
+		return true;
 	}
 	
 	function select(range) {
@@ -40,7 +81,7 @@ define( function () {
 		this.start=getPosition(range.startContainer, range.startNode);
 		this.end=getPosition(range.endContainer, range.endNode, true);
 		this.root=root;
-		
+		getPosition=undefined;
 		return this;
 		
 		function getPosition(node, offset, fromEnd) {
@@ -80,11 +121,10 @@ define( function () {
 		},
 		select : function() {
 			select(this.toRange());
-		}
+		},
+		isStRange : true,
 	};
 		
-	var selectionStart=document.createComment("com.the-knack.util/selStart");
-	var selectionEnd=document.createComment("com.the-knack.util/selEnd");
 	
 	return {
 		makeCounter:makeCounter,

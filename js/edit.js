@@ -34,11 +34,11 @@ define(["executor","jquery", "lib/diff", "lib/util"], function (exec,$,diff,u) {
 		function updateSelection() {
 			setTimeout(reallyUpdateSelection,0);
 			function reallyUpdateSelection() {
-				
+				u.markSelection();
 			}
 		}
 	
-		function startAction(name) {
+		function startActionOld(name) {
 			//note: need to make sure selection is entirely in the editable area.
 			var 	r=getSelection(), kn=knid.next(),
 				start=makeMarker(kn,"start"), end=makeMarker(kn,"end"),
@@ -84,6 +84,10 @@ define(["executor","jquery", "lib/diff", "lib/util"], function (exec,$,diff,u) {
 			}
 			return action;
 			
+		}
+		
+		function startAction(name) {
+			markSelection(elem);
 		}
 		
 		function findMarker(val,context) {
@@ -183,55 +187,7 @@ define(["executor","jquery", "lib/diff", "lib/util"], function (exec,$,diff,u) {
 		function returnKey() {
 		
 		}
-		
-		function KnackRange(range, root) {
-			
-			this.start=getPosition(range.startContainer, range.startNode);
-			this.end=getPosition(range.endContainer, range.endNode, true);
-			this.root=root;
-			
-			return this;
-			
-			function getPosition(node, offset, fromEnd) {
-				var result=[offset];
-				while (node != root) {
-					offset.push(getOffset(node, parent, fromEnd));
-					node=node.parentNode;
-				}
-			
-				function getOffset(node, fromEnd, sibProperty) {
-					var result=0, sibProperty=fromEnd ? "nextSibling" : "previousSibling";
-					while (node=node[sibProperty]) {
-						result++;
-					}
-					return result;
-				}
-			}
-		}
-		
-		$.extend(KnackRange.prototype, {
-			toRange : function() {
-				var result=document.createRange();
-				offset=this.start[0];
-				result.startOffset=this.start[0];
-				result.startContainer=nodeFromPosition(this.start);
-				result.endContainer=nodeFromPosition(this.end);
-				result.endOffset=result.endContainer.childNodes ? result.endContainer.childNodes.length -this.end[0] - 1 :  result.endContainer.length -this.end[0] -1 ;
-				return result;
 				
-				function nodeFromPosition(position) {
-					var i=1,result=root;
-					for (;i<position.length; i++) {
-						result=result.childNodes[position[i]];
-					}
-					return result;
-				}
-			},
-			select : function() {
-				select(this.toRange());
-			}
-		});
-		
 		
 		function update() {
 			
