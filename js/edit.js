@@ -1,18 +1,11 @@
-define(["executor","jquery", "lib/diff"], function (exec,$,diff) {
+define(["executor","jquery", "lib/diff", "lib/util"], function (exec,$,diff,u) {
 		
-	var knackEditorId=makeCounter();
+	var knackEditorId=u.makeCounter();
 
-	function makeCounter(prefix) {
-		var c=0, result;
-		prefix=prefix || "";
-		result=function() {return c};
-		result.next=function(){c++; return prefix+c;};
-		return result;
-	}
 
 	function KnackEditor(elem, options) { 
 		var 	openAction,								//the open action, if any
-			knid=makeCounter("knid-"+knackEditorId.next()+"-"),  //produces uids
+			knid=u.makeCounter("knid-"+knackEditorId.next()+"-"),  //produces uids
 			ignoreKeyup,									//Set to ignore the keyup event.
 			typing=false;								//are we in the middle of typing event?
 	
@@ -275,10 +268,8 @@ define(["executor","jquery", "lib/diff"], function (exec,$,diff) {
 			var undoPatch= diff.patch_make(t2,t1);
 			var result=diff.patch_apply(undoPatch,t2)[0];
 		}
-		console.log("Took " + ((new Date().valueOf())-s )+ "ms");
-		console.log("The patch is " + undoPatch);
-		console.log(typeof result);
-		window.result=result;
+		console.log(undoPatch);
+		window.result=undoPatch;
 		console.log(" and was "+((result==t1) ? "" : "un" )+"successful");
 		
 
